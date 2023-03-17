@@ -47,6 +47,10 @@
 	#include <stdio.h>
 #endif
 
+#if XYZ_DISABLE_PNG_CRC
+	#define FPNG_DISABLE_DECODE_CRC32_CHECKS (1)
+#endif
+
 // Allow the disabling of the chunk data CRC32 checks, for fuzz testing of the decoder
 #ifndef FPNG_DISABLE_DECODE_CRC32_CHECKS
 	#define FPNG_DISABLE_DECODE_CRC32_CHECKS (0)
@@ -192,6 +196,7 @@ namespace fpng
 #endif
 	}
 
+#ifndef XYZ_DISABLE_PNG_CRC
 	// See "Slicing by 4" CRC-32 algorithm here: 
 	// https://create.stephan-brumme.com/crc32/
 
@@ -247,6 +252,7 @@ namespace fpng
 
 		return ~crc;
 	}
+#endif
 
 #if FPNG_X86_OR_X64_CPU && !FPNG_NO_SSE 
 	// See Fast CRC Computation for Generic Polynomials Using PCLMULQDQ Instruction":
@@ -282,12 +288,16 @@ namespace fpng
 
 	static uint32_t crc32_sse41_simd(const unsigned char* buf, size_t len, uint32_t prev_crc32)
 	{
+#if XYZ_DISABLE_PNG_CRC
+		return 0;
+#else
 		if (len < 16)
 			return crc32_slice_by_4(buf, len, prev_crc32);
 
 		uint32_t simd_len = len & ~15;
 		uint32_t c = crc32_pclmul(buf, simd_len, prev_crc32);
 		return crc32_slice_by_4(buf + simd_len, len - simd_len, c);
+#endif
 	}
 #endif
 
@@ -392,12 +402,16 @@ namespace fpng
 
 	uint32_t fpng_crc32(const void* pData, size_t size, uint32_t prev_crc32)
 	{
+#if XYZ_DISABLE_PNG_CRC
+		return 0;
+#else
 #if FPNG_X86_OR_X64_CPU && !FPNG_NO_SSE 
 		if (g_cpu_info.can_use_pclmul())
-			return crc32_sse41_simd(static_cast<const uint8_t *>(pData), size, prev_crc32);
+			return crc32_sse41_simd(static_cast<const uint8_t*>(pData), size, prev_crc32);
 #endif
 
 		return crc32_slice_by_4(pData, size, prev_crc32);
+#endif
 	}
 
 #if FPNG_X86_OR_X64_CPU && !FPNG_NO_SSE 
