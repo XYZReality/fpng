@@ -196,7 +196,7 @@ namespace fpng
 #endif
 	}
 
-#ifndef XYZ_DISABLE_PNG_CRC
+#if !XYZ_DISABLE_PNG_CRC
 	// See "Slicing by 4" CRC-32 algorithm here: 
 	// https://create.stephan-brumme.com/crc32/
 
